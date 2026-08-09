@@ -1,11 +1,13 @@
 mod notes;
 mod preview;
+mod settings;
 mod tray;
 mod watch;
 mod windows;
 
 use notes::{NoteContent, NoteMeta, NoteSummary};
-use tauri::Manager;
+use serde::Serialize;
+use tauri::{Emitter, Manager};
 
 pub(crate) fn create_note_impl(app: &tauri::AppHandle) -> Result<String, String> {
     let id = notes::new_id();
@@ -60,6 +62,83 @@ fn set_pinned(app: tauri::AppHandle, id: String, pinned: bool) -> Result<(), Str
 }
 
 #[tauri::command]
+fn set_note_color(id: String, color: String) -> Result<(), String> {
+    let mut all = notes::load_meta();
+    if let Some(m) = all.get_mut(&id) {
+        m.color = Some(color);
+        notes::save_meta(&all);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_settings() -> settings::Settings {
+    settings::load()
+}
+
+#[tauri::command]
+fn save_settings(app: tauri::AppHandle, new_settings: settings::Settings) -> Result<(), String> {
+    settings::save(&new_settings);
+    let _ = app.emit("settings-changed", new_settings);
+    Ok(())
+}
+
+#[derive(Serialize)]
+struct SearchResult {
+    id: String,
+    title: String,
+    snippet: String,
+}
+
+#[tauri::command]
+fn search_notes(query: String) -> Vec<SearchResult> {
+    let q = query.to_lowercase();
+    let mut results = Vec::new();
+    for id in notes::note_ids_sorted(&notes::load_meta()) {
+        if let Ok(n) = notes::read_note(&id) {
+            if n.content.to_lowercase().contains(&q) || n.title.to_lowercase().contains(&q) {
+                let snippet = snippet_of(&n.content, &q);
+                results.push(SearchResult {
+                    id: n.id,
+                    title: n.title,
+                    snippet,
+                });
+            }
+        }
+    }
+    results
+}
+
+fn snippet_of(content: &str, query: &str) -> String {
+    let lower = content.to_lowercase();
+    if let Some(idx) = lower.find(query) {
+        let start = idx.saturating_sub(40);
+        let end = (idx + query.len() + 40).min(content.len());
+        let slice = content[start..end].trim();
+        let prefix = if start > 0 { "…" } else { "" };
+        let suffix = if end < content.len() { "…" } else { "" };
+        format!("{prefix}{slice}{suffix}")
+    } else {
+        content.chars().take(80).collect()
+    }
+}
+
+#[tauri::command]
+fn open_settings(app: tauri::AppHandle) -> Result<(), String> {
+    windows::open_settings_window(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_search(app: tauri::AppHandle) -> Result<(), String> {
+    windows::open_search_window(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_note(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    windows::open_note_window(&app, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn update_note_meta(id: String, meta: NoteMeta) -> Result<(), String> {
     let mut all = notes::load_meta();
     all.insert(id, meta);
@@ -102,6 +181,13 @@ pub fn run() {
             save_note,
             render_markdown,
             set_pinned,
+            set_note_color,
+            get_settings,
+            save_settings,
+            search_notes,
+            open_settings,
+            open_search,
+            open_note,
             update_note_meta,
             delete_note
         ])

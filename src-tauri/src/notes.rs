@@ -23,6 +23,7 @@ pub struct NoteMeta {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub always_on_top: bool,
+    pub color: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -31,6 +32,7 @@ pub struct NoteContent {
     pub title: String,
     pub content: String,
     pub pinned: bool,
+    pub color: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -86,12 +88,14 @@ pub fn read_note(id: &str) -> Result<NoteContent, std::io::Error> {
     }
     let content = fs::read_to_string(&path)?;
     let title = title_of(&content, id);
-    let pinned = load_meta().get(id).map(|m| m.always_on_top).unwrap_or(false);
+    let meta = load_meta().get(id).cloned().unwrap_or_default();
+    let color = meta.color.unwrap_or_else(|| "yellow".to_string());
     Ok(NoteContent {
         id: id.to_string(),
         title,
         content,
-        pinned,
+        pinned: meta.always_on_top,
+        color,
     })
 }
 

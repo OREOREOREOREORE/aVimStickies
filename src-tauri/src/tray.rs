@@ -32,6 +32,12 @@ fn handle_tray_event(app: &AppHandle, event: MenuEvent) {
         "new-note" => {
             let _ = super::create_note_impl(app);
         }
+        "settings" => {
+            let _ = windows::open_settings_window(app);
+        }
+        "search" => {
+            let _ = windows::open_search_window(app);
+        }
         "quit" => app.exit(0),
         id => {
             let _ = windows::open_note_window(app, id);
@@ -63,6 +69,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
 
     let separator_1 = PredefinedMenuItem::separator(app)?;
     let new_note = MenuItem::with_id(app, "new-note", "New note", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
+    let search = MenuItem::with_id(app, "search", "Search…", true, None::<&str>)?;
     let separator_2 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit vStickier", true, None::<&str>)?;
 
@@ -70,6 +78,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         note_items.iter().map(|i| i as &dyn IsMenuItem<Wry>).collect();
     items.push(&separator_1);
     items.push(&new_note);
+    items.push(&settings);
+    items.push(&search);
     items.push(&separator_2);
     items.push(&quit);
 
