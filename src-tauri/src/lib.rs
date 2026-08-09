@@ -1,5 +1,7 @@
 mod notes;
+mod preview;
 mod tray;
+mod watch;
 mod windows;
 
 use notes::{NoteContent, NoteMeta, NoteSummary};
@@ -40,6 +42,24 @@ fn save_note(id: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn render_markdown(content: String) -> String {
+    preview::render(&content)
+}
+
+#[tauri::command]
+fn set_pinned(app: tauri::AppHandle, id: String, pinned: bool) -> Result<(), String> {
+    let mut all = notes::load_meta();
+    if let Some(m) = all.get_mut(&id) {
+        m.always_on_top = pinned;
+        notes::save_meta(&all);
+    }
+    if let Some(win) = app.get_webview_window(&id) {
+        win.set_always_on_top(pinned).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn update_note_meta(id: String, meta: NoteMeta) -> Result<(), String> {
     let mut all = notes::load_meta();
     all.insert(id, meta);
@@ -54,7 +74,7 @@ fn delete_note(app: tauri::AppHandle, id: String) -> Result<(), String> {
     all.remove(&id);
     notes::save_meta(&all);
     if let Some(win) = app.get_webview_window(&id) {
-        let _ = win.close();
+        let _ = win.destroy();
     }
     tray::refresh_tray(&app);
     Ok(())
@@ -80,13 +100,26 @@ pub fn run() {
             list_notes,
             get_note,
             save_note,
+            render_markdown,
+            set_pinned,
             update_note_meta,
             delete_note
         ])
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcuts(["cmd+n"]).expect("register cmd+n")
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = create_note_impl(app);
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             let handle = app.handle();
             open_all(handle);
             tray::build_tray(handle)?;
+            watch::start_watcher(handle.clone());
             Ok(())
         })
         .run(tauri::generate_context!())

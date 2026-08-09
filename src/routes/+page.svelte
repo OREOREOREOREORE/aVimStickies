@@ -2,22 +2,27 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { listen } from "@tauri-apps/api/event";
   import { EditorView } from "@codemirror/view";
   import { EditorState } from "@codemirror/state";
   import { basicSetup } from "codemirror";
   import { markdown } from "@codemirror/lang-markdown";
   import { vim } from "@replit/codemirror-vim";
 
-  type Note = { id: string; title: string; content: string };
+  type Note = { id: string; title: string; content: string; pinned: boolean };
 
   let noteId = "";
   let note = $state<Note | null>(null);
   let error = $state("");
   let editorEl = $state<HTMLDivElement>();
+  let mode = $state<"edit" | "preview">("edit");
+  let html = $state("");
 
   let view: EditorView | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let reloadTimer: ReturnType<typeof setTimeout> | null = null;
   let created = false;
+  let unlisten: (() => void) | null = null;
 
   function titleOf(content: string): string {
     const first = content
@@ -29,8 +34,14 @@
 
   onMount(() => {
     void load();
+    void listen<string>("note-changed", (e) => {
+      if (e.payload === noteId) scheduleReload();
+    }).then((u) => (unlisten = u));
+
     return () => {
       if (saveTimer) clearTimeout(saveTimer);
+      if (reloadTimer) clearTimeout(reloadTimer);
+      unlisten?.();
       view?.destroy();
     };
   });
@@ -88,6 +99,41 @@
     }
   }
 
+  function scheduleReload() {
+    if (reloadTimer) clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => void reloadFromDisk(), 150);
+  }
+
+  async function reloadFromDisk() {
+    if (!note) return;
+    try {
+      const fresh = await invoke<Note>("get_note", { id: note.id });
+      const current = view?.state.doc.toString() ?? "";
+      if (view && fresh.content !== current) {
+        view.dispatch({ changes: { from: 0, to: current.length, insert: fresh.content } });
+      }
+      note.title = fresh.title;
+      note.pinned = fresh.pinned;
+      if (mode === "preview") {
+        html = await invoke<string>("render_markdown", { content: fresh.content });
+      }
+    } catch (e) {
+      console.error("reload failed", e);
+    }
+  }
+
+  async function togglePreview() {
+    if (!view) return;
+    if (mode === "edit") {
+      html = await invoke<string>("render_markdown", { content: view.state.doc.toString() });
+      mode = "preview";
+    } else {
+      mode = "edit";
+      view.requestMeasure();
+      view.focus();
+    }
+  }
+
   async function newNote() {
     await invoke("create_note");
   }
@@ -102,6 +148,18 @@
     await save();
     getCurrentWindow().close();
   }
+
+  async function togglePin() {
+    if (!note) return;
+    const next = !note.pinned;
+    note.pinned = next;
+    try {
+      await invoke("set_pinned", { id: note.id, pinned: next });
+    } catch (e) {
+      console.error("pin failed", e);
+      note.pinned = !next;
+    }
+  }
 </script>
 
 <main>
@@ -111,12 +169,17 @@
     <header data-tauri-drag-region>
       <h1 data-tauri-drag-region>{note.title}</h1>
       <div class="actions">
+        <button onclick={togglePreview} title="Toggle preview">
+          {mode === "edit" ? "👁" : "✏️"}
+        </button>
+        <button class:active={note.pinned} onclick={togglePin} title="Pin on top">📌</button>
         <button onclick={newNote} title="New note">＋</button>
         <button onclick={deleteNote} title="Delete note">🗑</button>
-        <button onclick={closeNote} title="Close note">×</button>
+        <button onclick={closeNote} title="Hide note">×</button>
       </div>
     </header>
-    <div class="editor" bind:this={editorEl}></div>
+    <div class="editor" class:hidden={mode === "preview"} bind:this={editorEl}></div>
+    <div class="preview" class:hidden={mode === "edit"}>{@html html}</div>
   {:else}
     <p class="loading">Loading…</p>
   {/if}
@@ -184,6 +247,11 @@
     background: rgba(0, 0, 0, 0.08);
   }
 
+  button.active {
+    color: #1a73e8;
+    background: rgba(26, 115, 232, 0.12);
+  }
+
   .editor {
     flex: 1;
     overflow: hidden;
@@ -198,6 +266,20 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
     line-height: 1.5;
+  }
+
+  .preview {
+    flex: 1;
+    overflow: auto;
+    padding: 10px 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #222;
+  }
+
+  .hidden {
+    display: none !important;
   }
 
   .error {
