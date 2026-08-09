@@ -5,6 +5,8 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+/build
+/.svelte-kit
 
 # Tauri
 src-tauri/target/
@@ -23,3 +25,9 @@ pnpm-debug.log*
 
 # Editor
 .idea/
+
+# Agent tooling (local only, reinstalled via the skills installer)
+.agents/
+.claude/
+skills-lock.json
+docs/agents/
