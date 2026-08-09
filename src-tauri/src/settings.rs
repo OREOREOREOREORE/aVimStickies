@@ -27,8 +27,8 @@ impl Default for Settings {
             show_preview_button: false,
             show_action_buttons: false,
             enable_color_cycle: false,
-            show_status_bar: true,
-            show_line_numbers: true,
+            show_status_bar: false,
+            show_line_numbers: false,
         }
     }
 }

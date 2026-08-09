@@ -47,7 +47,7 @@
 </script>
 
 <main>
-  <h1>vStickier Settings</h1>
+  <h1>aVimStickies Settings</h1>
 
   {#if settings}
     <label>

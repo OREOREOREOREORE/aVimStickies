@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "vStickier",
+  "productName": "aVimStickies",
   "version": "0.1.0",
-  "identifier": "com.vstickier.app",
+  "identifier": "com.avimstickies.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",

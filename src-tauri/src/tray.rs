@@ -72,7 +72,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let search = MenuItem::with_id(app, "search", "Search…", true, None::<&str>)?;
     let separator_2 = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit vStickier", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit aVimStickies", true, None::<&str>)?;
 
     let mut items: Vec<&dyn IsMenuItem<Wry>> =
         note_items.iter().map(|i| i as &dyn IsMenuItem<Wry>).collect();

@@ -33,7 +33,7 @@ pub fn open_note_window(app: &AppHandle, id: &str) -> tauri::Result<()> {
         id,
         WebviewUrl::App(format!("?note={id}").into()),
     )
-    .title("vStickier")
+    .title("aVimStickies")
     .decorations(false)
     .inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
     .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
@@ -91,7 +91,7 @@ pub fn open_settings_window(app: &AppHandle) -> tauri::Result<()> {
         return Ok(());
     }
     WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings".into()))
-        .title("vStickier Settings")
+        .title("aVimStickies Settings")
         .inner_size(380.0, 480.0)
         .build()?;
     Ok(())
