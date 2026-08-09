@@ -1,50 +1,133 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
 
-  let version = $state("…");
+  type Note = { id: string; title: string; content: string };
 
-  invoke<string>("app_version").then((v) => {
-    version = v;
-  });
+  let noteId = "";
+  let note = $state<Note | null>(null);
+  let error = $state("");
+
+  async function load() {
+    const params = new URLSearchParams(window.location.search);
+    noteId = params.get("note") ?? "";
+    if (!noteId) return;
+    try {
+      note = await invoke<Note>("get_note", { id: noteId });
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  load();
+
+  async function newNote() {
+    await invoke("create_note");
+  }
+
+  async function deleteNote() {
+    await invoke("delete_note", { id: noteId });
+  }
 </script>
 
-<main class="container">
-  <h1>vStickier</h1>
-  <p>{version}</p>
+<main>
+  {#if error}
+    <p class="error">{error}</p>
+  {:else if note}
+    <header>
+      <h1>{note.title}</h1>
+      <div class="actions">
+        <button onclick={newNote} title="New note">＋</button>
+        <button onclick={deleteNote} title="Delete note">🗑</button>
+      </div>
+    </header>
+    <pre>{note.content || "(empty — open in neovim to write)"}</pre>
+  {:else}
+    <p class="loading">Loading…</p>
+  {/if}
 </main>
 
 <style>
   :root {
-    font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-    font-size: 16px;
-    line-height: 24px;
-    font-weight: 400;
-    color: #0f0f0f;
-    background-color: #f6f6f6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: #1f1f1f;
   }
 
-  .container {
+  * {
+    box-sizing: border-box;
+  }
+
+  :global(body) {
     margin: 0;
-    padding-top: 20vh;
+    background: #fdf6d8;
+  }
+
+  main {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    text-align: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   h1 {
     margin: 0;
-    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  p {
+  .actions {
+    display: flex;
+    gap: 2px;
+  }
+
+  button {
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    color: #555;
+  }
+
+  button:hover {
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  pre {
+    margin: 0;
+    padding: 8px;
+    flex: 1;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #333;
+  }
+
+  .error {
+    color: #b00020;
+    padding: 8px;
+  }
+
+  .loading {
+    padding: 8px;
     color: #888;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color: #f6f6f6;
-      background-color: #2f2f2f;
-    }
   }
 </style>
