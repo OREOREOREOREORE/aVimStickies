@@ -13,6 +13,8 @@ pub struct Settings {
     pub show_preview_button: bool,
     pub show_action_buttons: bool,
     pub enable_color_cycle: bool,
+    pub show_status_bar: bool,
+    pub show_line_numbers: bool,
 }
 
 impl Default for Settings {
@@ -25,6 +27,8 @@ impl Default for Settings {
             show_preview_button: false,
             show_action_buttons: false,
             enable_color_cycle: false,
+            show_status_bar: true,
+            show_line_numbers: true,
         }
     }
 }

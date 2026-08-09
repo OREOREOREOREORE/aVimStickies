@@ -11,6 +11,8 @@
     show_preview_button: boolean;
     show_action_buttons: boolean;
     enable_color_cycle: boolean;
+    show_status_bar: boolean;
+    show_line_numbers: boolean;
   };
 
   const FONT_PRESETS = [
@@ -119,9 +121,32 @@
       <span>Enable Cmd+Shift+C to cycle note colors</span>
     </label>
 
+    <label class="check">
+      <input
+        type="checkbox"
+        checked={settings.show_status_bar}
+        onchange={(e) => set("show_status_bar", e.currentTarget.checked)}
+      />
+      <span>Show status bar (auto-save dot, char count)</span>
+    </label>
+
+    <label class="check">
+      <input
+        type="checkbox"
+        checked={settings.show_line_numbers}
+        onchange={(e) => set("show_line_numbers", e.currentTarget.checked)}
+      />
+      <span>Show line numbers in the editor</span>
+    </label>
     <p class="hint">
-      Keybinds: Cmd+P preview · Cmd+Shift+P pin · Cmd+Delete delete · Cmd+= / Cmd+- font size ·
-      Cmd+, settings · Cmd+Shift+F search · Cmd+N new note
+      <b>Keybinds: <br></b>
+      - Cmd+P preview<br>
+      - Cmd+Shift+P pin<br>
+      - Cmd+Delete delete<br>
+      - Cmd+= / Cmd+- font size<br>
+      - Cmd+, settings <br>
+      - Cmd+Shift+F search <br>
+      - Cmd+N new note <br>
     </p>
   {/if}
 </main>
@@ -177,6 +202,17 @@
 
   input[type="range"] {
     width: 100%;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   button {

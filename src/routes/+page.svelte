@@ -3,9 +3,35 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { listen } from "@tauri-apps/api/event";
-  import { EditorView } from "@codemirror/view";
-  import { EditorState } from "@codemirror/state";
-  import { basicSetup } from "codemirror";
+  import { Compartment, EditorState, type Extension } from "@codemirror/state";
+  import {
+    EditorView,
+    keymap,
+    lineNumbers,
+    highlightActiveLineGutter,
+    highlightSpecialChars,
+    drawSelection,
+    dropCursor,
+    rectangularSelection,
+    crosshairCursor,
+    highlightActiveLine,
+  } from "@codemirror/view";
+  import { history, defaultKeymap, historyKeymap } from "@codemirror/commands";
+  import {
+    syntaxHighlighting,
+    defaultHighlightStyle,
+    indentOnInput,
+    bracketMatching,
+    foldGutter,
+    foldKeymap,
+  } from "@codemirror/language";
+  import {
+    closeBrackets,
+    closeBracketsKeymap,
+    autocompletion,
+    completionKeymap,
+  } from "@codemirror/autocomplete";
+  import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
   import { markdown } from "@codemirror/lang-markdown";
   import { vim } from "@replit/codemirror-vim";
 
@@ -18,6 +44,8 @@
     show_preview_button: boolean;
     show_action_buttons: boolean;
     enable_color_cycle: boolean;
+    show_status_bar: boolean;
+    show_line_numbers: boolean;
   };
 
   const COLORS: Record<string, string> = {
@@ -29,6 +57,40 @@
     gray: "#e6e6e6",
   };
   const COLOR_ORDER = ["yellow", "blue", "green", "pink", "purple", "gray"];
+
+  const readOnlyComp = new Compartment();
+  const lineNumbersComp = new Compartment();
+
+  const baseExtensions = [
+    highlightSpecialChars(),
+    history(),
+    drawSelection(),
+    dropCursor(),
+    EditorState.allowMultipleSelections.of(true),
+    indentOnInput(),
+    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    bracketMatching(),
+    closeBrackets(),
+    autocompletion(),
+    rectangularSelection(),
+    crosshairCursor(),
+    highlightActiveLine(),
+    highlightSelectionMatches(),
+    keymap.of([
+      ...closeBracketsKeymap,
+      ...defaultKeymap,
+      ...searchKeymap,
+      ...historyKeymap,
+      ...foldKeymap,
+      ...completionKeymap,
+    ]),
+  ];
+
+  function lineNumberExts(): Extension[] {
+    return settings?.show_line_numbers
+      ? [lineNumbers(), highlightActiveLineGutter(), foldGutter()]
+      : [];
+  }
 
   let noteId = "";
   let note = $state<Note | null>(null);
@@ -63,6 +125,7 @@
     void listen<Settings>("settings-changed", (e) => {
       settings = e.payload;
       applySettings();
+      applyLineNumbers();
     }).then((u) => unlisteners.push(u));
     window.addEventListener("keydown", onKeydown);
 
@@ -116,7 +179,9 @@
       state: EditorState.create({
         doc,
         extensions: [
-          basicSetup,
+          ...baseExtensions,
+          readOnlyComp.of(EditorState.readOnly.of(false)),
+          lineNumbersComp.of(lineNumberExts()),
           markdown(),
           vim(),
           EditorView.updateListener.of((u) => {
@@ -131,6 +196,14 @@
       parent: editorEl,
     });
     view.focus();
+  }
+
+  function applyLineNumbers() {
+    view?.dispatch({ effects: lineNumbersComp.reconfigure(lineNumberExts()) });
+  }
+
+  function setReadOnly(ro: boolean) {
+    view?.dispatch({ effects: readOnlyComp.reconfigure(EditorState.readOnly.of(ro)) });
   }
 
   function setCounts(content: string) {
@@ -216,9 +289,12 @@
     if (!view) return;
     if (mode === "edit") {
       html = await invoke<string>("render_markdown", { content: view.state.doc.toString() });
+      setReadOnly(true);
+      (document.activeElement as HTMLElement | null)?.blur();
       mode = "preview";
     } else {
       mode = "edit";
+      setReadOnly(false);
       view.requestMeasure();
       view.focus();
     }
@@ -317,10 +393,12 @@
     <div class="editor" class:hidden={mode === "preview"} bind:this={editorEl}></div>
     <div class="preview" class:hidden={mode === "edit"}>{@html html}</div>
 
-    <footer>
-      <span class="dot" class:saved={!dirty}></span>
-      <span>{counts.chars} chars · {counts.lines} lines</span>
-    </footer>
+    {#if settings?.show_status_bar}
+      <footer>
+        <span class="dot" class:saved={!dirty}></span>
+        <span>{counts.chars} chars · {counts.lines} lines</span>
+      </footer>
+    {/if}
   {:else}
     <p class="loading">Loading…</p>
   {/if}
