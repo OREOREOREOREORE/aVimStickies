@@ -17,6 +17,7 @@
 
   let view: EditorView | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let created = false;
 
   function titleOf(content: string): string {
     const first = content
@@ -34,13 +35,19 @@
     };
   });
 
+  $effect(() => {
+    if (!created && note && editorEl) {
+      created = true;
+      createEditor(note.content);
+    }
+  });
+
   async function load() {
     const params = new URLSearchParams(window.location.search);
     noteId = params.get("note") ?? "";
     if (!noteId) return;
     try {
       note = await invoke<Note>("get_note", { id: noteId });
-      createEditor(note.content);
     } catch (e) {
       error = String(e);
     }
@@ -62,6 +69,7 @@
       }),
       parent: editorEl,
     });
+    view.focus();
   }
 
   function scheduleSave() {
@@ -145,7 +153,6 @@
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     -webkit-user-select: none;
     user-select: none;
-    -webkit-app-region: drag;
   }
 
   h1 {
@@ -160,7 +167,6 @@
   .actions {
     display: flex;
     gap: 2px;
-    -webkit-app-region: no-drag;
   }
 
   button {
@@ -172,7 +178,6 @@
     padding: 4px 6px;
     cursor: pointer;
     color: #555;
-    -webkit-app-region: no-drag;
   }
 
   button:hover {
