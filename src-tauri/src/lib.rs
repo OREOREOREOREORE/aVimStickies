@@ -1,16 +1,18 @@
 mod notes;
+mod tray;
 mod windows;
 
 use notes::{NoteContent, NoteMeta, NoteSummary};
 use tauri::Manager;
 
-fn create_note_impl(app: &tauri::AppHandle) -> Result<String, String> {
+pub(crate) fn create_note_impl(app: &tauri::AppHandle) -> Result<String, String> {
     let id = notes::new_id();
     std::fs::write(notes::note_path(&id), "").map_err(|e| e.to_string())?;
     let mut meta = notes::load_meta();
     meta.insert(id.clone(), NoteMeta::default());
     notes::save_meta(&meta);
     windows::open_note_window(app, &id).map_err(|e| e.to_string())?;
+    tray::refresh_tray(app);
     Ok(id)
 }
 
@@ -54,6 +56,7 @@ fn delete_note(app: tauri::AppHandle, id: String) -> Result<(), String> {
     if let Some(win) = app.get_webview_window(&id) {
         let _ = win.close();
     }
+    tray::refresh_tray(&app);
     Ok(())
 }
 
@@ -81,7 +84,9 @@ pub fn run() {
             delete_note
         ])
         .setup(|app| {
-            open_all(app.handle());
+            let handle = app.handle();
+            open_all(handle);
+            tray::build_tray(handle)?;
             Ok(())
         })
         .run(tauri::generate_context!())
