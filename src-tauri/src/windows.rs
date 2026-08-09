@@ -2,8 +2,8 @@ use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, Webv
 
 use crate::notes;
 
-const DEFAULT_WIDTH: f64 = 240.0;
-const DEFAULT_HEIGHT: f64 = 280.0;
+const DEFAULT_WIDTH: f64 = 420.0;
+const DEFAULT_HEIGHT: f64 = 320.0;
 
 pub fn open_note_window(app: &AppHandle, id: &str) -> tauri::Result<()> {
     if app.get_webview_window(id).is_some() {
@@ -18,6 +18,7 @@ pub fn open_note_window(app: &AppHandle, id: &str) -> tauri::Result<()> {
         WebviewUrl::App(format!("?note={id}").into()),
     )
     .title("vStickier")
+    .decorations(false)
     .inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
     .build()?;
 

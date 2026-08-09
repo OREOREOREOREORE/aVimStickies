@@ -1,11 +1,38 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { EditorView } from "@codemirror/view";
+  import { EditorState } from "@codemirror/state";
+  import { basicSetup } from "codemirror";
+  import { markdown } from "@codemirror/lang-markdown";
+  import { vim } from "@replit/codemirror-vim";
 
   type Note = { id: string; title: string; content: string };
 
   let noteId = "";
   let note = $state<Note | null>(null);
   let error = $state("");
+  let editorEl = $state<HTMLDivElement>();
+
+  let view: EditorView | null = null;
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function titleOf(content: string): string {
+    const first = content
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => l.length > 0);
+    return first || noteId;
+  }
+
+  onMount(() => {
+    void load();
+    return () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      view?.destroy();
+    };
+  });
 
   async function load() {
     const params = new URLSearchParams(window.location.search);
@@ -13,19 +40,59 @@
     if (!noteId) return;
     try {
       note = await invoke<Note>("get_note", { id: noteId });
+      createEditor(note.content);
     } catch (e) {
       error = String(e);
     }
   }
 
-  load();
+  function createEditor(doc: string) {
+    if (!editorEl) return;
+    view = new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [
+          basicSetup,
+          markdown(),
+          vim(),
+          EditorView.updateListener.of((u) => {
+            if (u.docChanged) scheduleSave();
+          }),
+        ],
+      }),
+      parent: editorEl,
+    });
+  }
+
+  function scheduleSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => void save(), 500);
+  }
+
+  async function save() {
+    if (!view || !note) return;
+    const content = view.state.doc.toString();
+    try {
+      await invoke("save_note", { id: note.id, content });
+      note.title = titleOf(content);
+    } catch (e) {
+      console.error("save failed", e);
+    }
+  }
 
   async function newNote() {
     await invoke("create_note");
   }
 
   async function deleteNote() {
+    if (saveTimer) clearTimeout(saveTimer);
     await invoke("delete_note", { id: noteId });
+  }
+
+  async function closeNote() {
+    if (saveTimer) clearTimeout(saveTimer);
+    await save();
+    getCurrentWindow().close();
   }
 </script>
 
@@ -33,14 +100,15 @@
   {#if error}
     <p class="error">{error}</p>
   {:else if note}
-    <header>
-      <h1>{note.title}</h1>
+    <header data-tauri-drag-region>
+      <h1 data-tauri-drag-region>{note.title}</h1>
       <div class="actions">
         <button onclick={newNote} title="New note">＋</button>
         <button onclick={deleteNote} title="Delete note">🗑</button>
+        <button onclick={closeNote} title="Close note">×</button>
       </div>
     </header>
-    <pre>{note.content || "(empty — open in neovim to write)"}</pre>
+    <div class="editor" bind:this={editorEl}></div>
   {:else}
     <p class="loading">Loading…</p>
   {/if}
@@ -77,6 +145,7 @@
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     -webkit-user-select: none;
     user-select: none;
+    -webkit-app-region: drag;
   }
 
   h1 {
@@ -91,6 +160,7 @@
   .actions {
     display: flex;
     gap: 2px;
+    -webkit-app-region: no-drag;
   }
 
   button {
@@ -102,23 +172,27 @@
     padding: 4px 6px;
     cursor: pointer;
     color: #555;
+    -webkit-app-region: no-drag;
   }
 
   button:hover {
     background: rgba(0, 0, 0, 0.08);
   }
 
-  pre {
-    margin: 0;
-    padding: 8px;
+  .editor {
     flex: 1;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    overflow: hidden;
+    background: #fffdf4;
+  }
+
+  .editor :global(.cm-editor) {
+    height: 100%;
+  }
+
+  .editor :global(.cm-scroller) {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
     line-height: 1.5;
-    color: #333;
   }
 
   .error {

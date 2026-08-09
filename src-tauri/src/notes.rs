@@ -91,6 +91,10 @@ pub fn read_note(id: &str) -> Result<NoteContent, std::io::Error> {
     })
 }
 
+pub fn write_note(id: &str, content: &str) -> Result<(), std::io::Error> {
+    fs::write(note_path(id), content)
+}
+
 pub fn note_ids_sorted(meta: &Meta) -> Vec<String> {
     let mut ids: Vec<String> = meta.keys().cloned().collect();
     ids.sort();

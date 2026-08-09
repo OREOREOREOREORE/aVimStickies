@@ -33,6 +33,11 @@ fn get_note(id: String) -> Result<NoteContent, String> {
 }
 
 #[tauri::command]
+fn save_note(id: String, content: String) -> Result<(), String> {
+    notes::write_note(&id, &content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn update_note_meta(id: String, meta: NoteMeta) -> Result<(), String> {
     let mut all = notes::load_meta();
     all.insert(id, meta);
@@ -71,6 +76,7 @@ pub fn run() {
             create_note,
             list_notes,
             get_note,
+            save_note,
             update_note_meta,
             delete_note
         ])
