@@ -10,7 +10,7 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let menu = build_menu(app)?;
     let mut builder = TrayIconBuilder::with_id("main")
         .menu(&menu)
-        .show_menu_on_left_click(false)
+        .show_menu_on_left_click(true)
         .on_menu_event(handle_tray_event);
     if let Some(icon) = app.default_window_icon() {
         builder = builder.icon(icon.clone());
