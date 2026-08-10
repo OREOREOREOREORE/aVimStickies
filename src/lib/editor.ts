@@ -61,6 +61,7 @@ export interface NoteEditor {
   setReadOnly(ro: boolean): void;
   applyLineNumbers(show: boolean): void;
   applyWrap(show: boolean): void;
+  applyTheme(dark: boolean): void;
   focus(): void;
   requestMeasure(): void;
   destroy(): void;
@@ -72,12 +73,14 @@ export function createNoteEditor(
     doc: string;
     showLineNumbers: boolean;
     wrapText: boolean;
+    dark: boolean;
     onChange?: (doc: string) => void;
   }
 ): NoteEditor {
   const readOnlyComp = new Compartment();
   const lineNumbersComp = new Compartment();
   const wrapComp = new Compartment();
+  const themeComp = new Compartment();
 
   const view = new EditorView({
     state: EditorState.create({
@@ -87,6 +90,7 @@ export function createNoteEditor(
         readOnlyComp.of(EditorState.readOnly.of(false)),
         lineNumbersComp.of(lineNumberExts(opts.showLineNumbers)),
         wrapComp.of(opts.wrapText ? EditorView.lineWrapping : []),
+        themeComp.of(EditorView.theme({}, { dark: opts.dark })),
         markdown(),
         vim(),
         EditorView.updateListener.of((u) => {
@@ -118,6 +122,11 @@ export function createNoteEditor(
     applyWrap: (show: boolean) => {
       view.dispatch({
         effects: wrapComp.reconfigure(show ? EditorView.lineWrapping : []),
+      });
+    },
+    applyTheme: (dark: boolean) => {
+      view.dispatch({
+        effects: themeComp.reconfigure(EditorView.theme({}, { dark })),
       });
     },
     focus: () => view.focus(),

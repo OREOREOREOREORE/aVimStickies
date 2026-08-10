@@ -50,6 +50,7 @@
       applySettings();
       view?.applyLineNumbers(settings.show_line_numbers);
       view?.applyWrap(settings.wrap_text);
+      view?.applyTheme(settings.theme === "dark");
     }).then((u) => unlisteners.push(u));
     void listen<string>("update-available", (e) => {
       updateVersion = e.payload;
@@ -110,6 +111,7 @@
       doc,
       showLineNumbers: settings?.show_line_numbers ?? true,
       wrapText: settings?.wrap_text ?? true,
+      dark: settings?.theme === "dark",
       onChange: (content) => {
         dirty = true;
         setCounts(content);
