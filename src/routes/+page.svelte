@@ -3,94 +3,14 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { listen } from "@tauri-apps/api/event";
-  import { Compartment, EditorState, type Extension } from "@codemirror/state";
-  import {
-    EditorView,
-    keymap,
-    lineNumbers,
-    highlightActiveLineGutter,
-    highlightSpecialChars,
-    drawSelection,
-    dropCursor,
-    rectangularSelection,
-    crosshairCursor,
-    highlightActiveLine,
-  } from "@codemirror/view";
-  import { history, defaultKeymap, historyKeymap } from "@codemirror/commands";
-  import {
-    syntaxHighlighting,
-    defaultHighlightStyle,
-    indentOnInput,
-    bracketMatching,
-    foldGutter,
-    foldKeymap,
-  } from "@codemirror/language";
-  import {
-    closeBrackets,
-    closeBracketsKeymap,
-    autocompletion,
-    completionKeymap,
-  } from "@codemirror/autocomplete";
-  import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-  import { markdown } from "@codemirror/lang-markdown";
-  import { vim } from "@replit/codemirror-vim";
-
-  type Note = { id: string; title: string; content: string; pinned: boolean; color: string };
-  type Settings = {
-    font_family: string;
-    font_size: number;
-    theme: string;
-    opacity: number;
-    show_preview_button: boolean;
-    show_action_buttons: boolean;
-    enable_color_cycle: boolean;
-    show_status_bar: boolean;
-    show_line_numbers: boolean;
-  };
-
-  const COLORS: Record<string, string> = {
-    yellow: "#fdf6d8",
-    blue: "#d8e6fd",
-    green: "#d8f5d8",
-    pink: "#fdd8e6",
-    purple: "#e8d8fd",
-    gray: "#e6e6e6",
-  };
-  const COLOR_ORDER = ["yellow", "blue", "green", "pink", "purple", "gray"];
-
-  const readOnlyComp = new Compartment();
-  const lineNumbersComp = new Compartment();
-
-  const baseExtensions = [
-    highlightSpecialChars(),
-    history(),
-    drawSelection(),
-    dropCursor(),
-    EditorState.allowMultipleSelections.of(true),
-    indentOnInput(),
-    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-    bracketMatching(),
-    closeBrackets(),
-    autocompletion(),
-    rectangularSelection(),
-    crosshairCursor(),
-    highlightActiveLine(),
-    highlightSelectionMatches(),
-    keymap.of([
-      ...closeBracketsKeymap,
-      ...defaultKeymap,
-      ...searchKeymap,
-      ...historyKeymap,
-      ...foldKeymap,
-      ...completionKeymap,
-    ]),
-  ];
-
-  function lineNumberExts(): Extension[] {
-    return settings?.show_line_numbers
-      ? [lineNumbers(), highlightActiveLineGutter(), foldGutter()]
-      : [];
-  }
+  import { LogicalSize } from "@tauri-apps/api/dpi";
+  import { createNoteEditor, type NoteEditor } from "$lib/editor";
+  import { COLORS, DEFAULT_COLOR, nextColor } from "$lib/colors";
+  import type { Note, Settings } from "$lib/types";
+  import NoteHeader from "$lib/components/NoteHeader.svelte";
+  import PreviewPane from "$lib/components/PreviewPane.svelte";
+  import StatusBar from "$lib/components/StatusBar.svelte";
+  import UpdateBanner from "$lib/components/UpdateBanner.svelte";
 
   let noteId = "";
   let note = $state<Note | null>(null);
@@ -103,12 +23,14 @@
   let dirty = $state(false);
   let counts = $state({ chars: 0, lines: 0 });
   let paletteOpen = $state(false);
+  let collapsed = $state(false);
 
-  let view: EditorView | null = null;
+  let view: NoteEditor | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let reloadTimer: ReturnType<typeof setTimeout> | null = null;
   let created = false;
   let unlisteners: (() => void)[] = [];
+  let savedSize: LogicalSize | null = null;
 
   function titleOf(content: string): string {
     const first = content
@@ -126,7 +48,7 @@
     void listen<Settings>("settings-changed", (e) => {
       settings = e.payload;
       applySettings();
-      applyLineNumbers();
+      view?.applyLineNumbers(settings.show_line_numbers);
     }).then((u) => unlisteners.push(u));
     void listen<string>("update-available", (e) => {
       updateVersion = e.payload;
@@ -174,40 +96,21 @@
     root.style.setProperty("--font-size", `${settings.font_size}px`);
     root.style.opacity = String(settings.opacity);
     root.dataset.theme = settings.theme;
-    root.style.setProperty("--note-bg", COLORS[note?.color ?? "yellow"] ?? "#fdf6d8");
+    root.style.setProperty("--note-bg", COLORS[note?.color ?? DEFAULT_COLOR] ?? COLORS[DEFAULT_COLOR]);
   }
 
   function createEditor(doc: string) {
     if (!editorEl) return;
-    view = new EditorView({
-      state: EditorState.create({
-        doc,
-        extensions: [
-          ...baseExtensions,
-          readOnlyComp.of(EditorState.readOnly.of(false)),
-          lineNumbersComp.of(lineNumberExts()),
-          markdown(),
-          vim(),
-          EditorView.updateListener.of((u) => {
-            if (u.docChanged) {
-              dirty = true;
-              setCounts(u.state.doc.toString());
-              scheduleSave();
-            }
-          }),
-        ],
-      }),
-      parent: editorEl,
+    view = createNoteEditor(editorEl, {
+      doc,
+      showLineNumbers: settings?.show_line_numbers ?? true,
+      onChange: (content) => {
+        dirty = true;
+        setCounts(content);
+        scheduleSave();
+      },
     });
     view.focus();
-  }
-
-  function applyLineNumbers() {
-    view?.dispatch({ effects: lineNumbersComp.reconfigure(lineNumberExts()) });
-  }
-
-  function setReadOnly(ro: boolean) {
-    view?.dispatch({ effects: readOnlyComp.reconfigure(EditorState.readOnly.of(ro)) });
   }
 
   function setCounts(content: string) {
@@ -252,7 +155,7 @@
 
   async function save() {
     if (!view || !note) return;
-    const content = view.state.doc.toString();
+    const content = view.getContent();
     try {
       await invoke("save_note", { id: note.id, content });
       note.title = titleOf(content);
@@ -271,12 +174,7 @@
     if (!note) return;
     try {
       const fresh = await invoke<Note>("get_note", { id: note.id });
-      const current = view?.state.doc.toString() ?? "";
-      if (view && fresh.content !== current) {
-        view.dispatch({ changes: { from: 0, to: current.length, insert: fresh.content } });
-        dirty = false;
-        setCounts(fresh.content);
-      }
+      if (view) view.setDoc(fresh.content);
       note.title = fresh.title;
       note.pinned = fresh.pinned;
       note.color = fresh.color;
@@ -284,6 +182,8 @@
       if (mode === "preview") {
         html = await invoke<string>("render_markdown", { content: fresh.content });
       }
+      dirty = false;
+      setCounts(fresh.content);
     } catch (e) {
       console.error("reload failed", e);
     }
@@ -292,13 +192,13 @@
   async function togglePreview() {
     if (!view) return;
     if (mode === "edit") {
-      html = await invoke<string>("render_markdown", { content: view.state.doc.toString() });
-      setReadOnly(true);
+      html = await invoke<string>("render_markdown", { content: view.getContent() });
+      view.setReadOnly(true);
       (document.activeElement as HTMLElement | null)?.blur();
       mode = "preview";
     } else {
       mode = "edit";
-      setReadOnly(false);
+      view.setReadOnly(false);
       view.requestMeasure();
       view.focus();
     }
@@ -346,9 +246,7 @@
 
   function cycleColor() {
     if (!note) return;
-    const idx = COLOR_ORDER.indexOf(note.color);
-    const next = COLOR_ORDER[(idx + 1) % COLOR_ORDER.length];
-    void pickColor(next);
+    void pickColor(nextColor(note.color));
   }
 
   function changeFontSize(delta: number) {
@@ -357,6 +255,31 @@
     applySettings();
     void invoke("save_settings", { newSettings: settings });
   }
+
+  async function toggleCollapse() {
+    if (collapsed) await expand();
+    else await collapse();
+  }
+
+  async function collapse() {
+    const win = getCurrentWindow();
+    const phys = await win.innerSize();
+    const scale = await win.scaleFactor();
+    savedSize = new LogicalSize(phys.width / scale, phys.height / scale);
+    const headerH = document.querySelector("header")?.clientHeight ?? 24;
+    await win.setMinSize(new LogicalSize(100, 20));
+    await win.setSize(new LogicalSize(savedSize.width, headerH + 2));
+    collapsed = true;
+  }
+
+  async function expand() {
+    if (!savedSize) return;
+    const win = getCurrentWindow();
+    await win.setSize(savedSize);
+    await win.setMinSize(new LogicalSize(220, 160));
+    collapsed = false;
+    view?.requestMeasure();
+  }
 </script>
 
 <main>
@@ -364,54 +287,29 @@
     <p class="error">{error}</p>
   {:else if note}
     {#if updateVersion}
-      <div class="banner">
-        <span>Update to v{updateVersion} available</span>
-        <button onclick={installUpdate}>Install</button>
-      </div>
+      <UpdateBanner version={updateVersion} onInstall={installUpdate} />
     {/if}
-    <header data-tauri-drag-region>
-      <h1 data-tauri-drag-region>{note.title}</h1>
-      <div class="actions">
-        {#if settings?.show_preview_button}
-          <button onclick={togglePreview}>{mode === "edit" ? "Preview" : "Edit"}</button>
-        {/if}
-        {#if settings?.show_action_buttons}
-          <button onclick={togglePin}>{note.pinned ? "Unpin" : "Pin"}</button>
-          <button onclick={newNote}>New</button>
-          <button onclick={deleteNote}>Del</button>
-        {/if}
-        <button
-          class="color-dot"
-          style={`background:${COLORS[note.color] ?? "#fdf6d8"}`}
-          onclick={() => (paletteOpen = !paletteOpen)}
-          title="Note color"
-        ></button>
-        <button onclick={closeNote} title="Hide note">×</button>
-      </div>
-    </header>
-
-    {#if paletteOpen}
-      <div class="palette">
-        {#each COLOR_ORDER as name}
-          <button
-            class="swatch"
-            class:selected={note.color === name}
-            style={`background:${COLORS[name]}`}
-            onclick={() => pickColor(name)}
-            title={name}
-          ></button>
-        {/each}
-      </div>
-    {/if}
-
-    <div class="editor" class:hidden={mode === "preview"} bind:this={editorEl}></div>
-    <div class="preview" class:hidden={mode === "edit"}>{@html html}</div>
-
-    {#if settings?.show_status_bar}
-      <footer>
-        <span class="dot" class:saved={!dirty}></span>
-        <span>{counts.chars} chars · {counts.lines} lines</span>
-      </footer>
+    <NoteHeader
+      title={note.title}
+      color={note.color}
+      pinned={note.pinned}
+      mode={mode}
+      paletteOpen={paletteOpen}
+      showPreviewButton={settings?.show_preview_button ?? false}
+      showActionButtons={settings?.show_action_buttons ?? false}
+      onPreview={togglePreview}
+      onPin={togglePin}
+      onNew={newNote}
+      onDelete={deleteNote}
+      onClose={closeNote}
+      onPickColor={pickColor}
+      onTogglePalette={() => (paletteOpen = !paletteOpen)}
+      onCollapse={toggleCollapse}
+    />
+    <div class="editor" class:hidden={mode === "preview" || collapsed} bind:this={editorEl}></div>
+    <PreviewPane html={html} hidden={mode === "edit" || collapsed} />
+    {#if settings?.show_status_bar && !collapsed}
+      <StatusBar dirty={dirty} chars={counts.chars} lines={counts.lines} />
     {/if}
   {:else}
     <p class="loading">Loading…</p>
@@ -452,110 +350,6 @@
     overflow: hidden;
   }
 
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--header-border);
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  .banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px;
-    font-size: 12px;
-    background: rgba(26, 115, 232, 0.12);
-    color: var(--fg);
-    border-bottom: 1px solid var(--header-border);
-  }
-
-  .banner button {
-    border: 1px solid var(--header-border);
-    background: rgba(26, 115, 232, 0.15);
-    color: var(--fg);
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 12px;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
-  button {
-    border: none;
-    background: transparent;
-    border-radius: 4px;
-    font-size: 12px;
-    line-height: 1;
-    padding: 4px 6px;
-    cursor: pointer;
-    color: #555;
-  }
-
-  button:hover {
-    background: rgba(0, 0, 0, 0.08);
-  }
-
-  :global([data-theme="dark"]) button {
-    color: #bbb;
-  }
-
-  :global([data-theme="dark"]) button:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .color-dot {
-    width: 14px;
-    height: 14px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-  }
-
-  .palette {
-    position: absolute;
-    top: 30px;
-    right: 8px;
-    display: flex;
-    gap: 4px;
-    padding: 6px;
-    background: var(--panel-bg);
-    border: 1px solid var(--header-border);
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 10;
-  }
-
-  .swatch {
-    width: 16px;
-    height: 16px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-  }
-
-  .swatch.selected {
-    outline: 2px solid var(--fg);
-    outline-offset: 1px;
-  }
-
   .editor {
     flex: 1;
     overflow: hidden;
@@ -586,39 +380,6 @@
 
   :global([data-theme="dark"]) .editor :global(.cm-selectionBackground) {
     background: rgba(255, 255, 255, 0.2);
-  }
-
-  .preview {
-    flex: 1;
-    overflow: auto;
-    padding: 10px 12px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 13px;
-    line-height: 1.6;
-    background: var(--panel-bg);
-    color: var(--fg);
-  }
-
-  footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px 8px;
-    font-size: 10px;
-    color: var(--fg);
-    opacity: 0.7;
-    border-top: 1px solid var(--header-border);
-  }
-
-  .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #e67e22;
-  }
-
-  .dot.saved {
-    background: #2ecc71;
   }
 
   .hidden {

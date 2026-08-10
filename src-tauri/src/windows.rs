@@ -71,8 +71,10 @@ pub fn open_note_window(app: &AppHandle, id: &str) -> tauri::Result<()> {
                     if let Some(m) = meta.get_mut(&id) {
                         m.x = Some(pos.x);
                         m.y = Some(pos.y);
-                        m.width = Some(size.width);
-                        m.height = Some(size.height);
+                        if size.height >= 40 {
+                            m.width = Some(size.width);
+                            m.height = Some(size.height);
+                        }
                         notes::save_meta(&meta);
                     }
                 }
