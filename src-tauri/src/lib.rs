@@ -8,6 +8,7 @@ mod windows;
 use notes::{NoteContent, NoteMeta, NoteSummary};
 use serde::Serialize;
 use tauri::{Emitter, Manager};
+use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
 use tauri_plugin_updater::UpdaterExt;
 
 pub(crate) fn create_note_impl(app: &tauri::AppHandle) -> Result<String, String> {
@@ -231,10 +232,15 @@ pub fn run() {
         ])
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_shortcuts(["cmd+n"]).expect("register cmd+n")
-                .with_handler(|app, _shortcut, event| {
-                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                        let _ = create_note_impl(app);
+                .with_shortcuts(["cmd+n", "cmd+shift+f"])
+                .expect("register shortcuts")
+                .with_handler(|app, shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        if shortcut.matches(Modifiers::SUPER, Code::KeyN) {
+                            let _ = create_note_impl(app);
+                        } else if shortcut.matches(Modifiers::SUPER | Modifiers::SHIFT, Code::KeyF) {
+                            let _ = windows::open_search_window(app);
+                        }
                     }
                 })
                 .build(),
