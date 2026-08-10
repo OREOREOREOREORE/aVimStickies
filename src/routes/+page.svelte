@@ -174,7 +174,11 @@
     if (!note) return;
     try {
       const fresh = await invoke<Note>("get_note", { id: note.id });
-      if (view) view.setDoc(fresh.content);
+      if (view && !dirty) {
+        view.setDoc(fresh.content);
+        dirty = false;
+        setCounts(fresh.content);
+      }
       note.title = fresh.title;
       note.pinned = fresh.pinned;
       note.color = fresh.color;
@@ -182,8 +186,6 @@
       if (mode === "preview") {
         html = await invoke<string>("render_markdown", { content: fresh.content });
       }
-      dirty = false;
-      setCounts(fresh.content);
     } catch (e) {
       console.error("reload failed", e);
     }

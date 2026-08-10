@@ -82,19 +82,23 @@ export function createNoteEditor(
         markdown(),
         vim(),
         EditorView.updateListener.of((u) => {
-          if (u.docChanged) opts.onChange?.(u.state.doc.toString());
+          if (u.docChanged && !silent) opts.onChange?.(u.state.doc.toString());
         }),
       ],
     }),
     parent,
   });
 
+  let silent = false;
+
   return {
     getContent: () => view.state.doc.toString(),
     setDoc: (doc: string) => {
       const current = view.state.doc.toString();
       if (doc !== current) {
+        silent = true;
         view.dispatch({ changes: { from: 0, to: current.length, insert: doc } });
+        silent = false;
       }
     },
     setReadOnly: (ro: boolean) => {
