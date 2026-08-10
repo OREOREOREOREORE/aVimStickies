@@ -25,9 +25,22 @@ Download the .dmg from [Releases](../../releases), drag aVimStickies to Applicat
 - Floating windows with remembered position/size, 6-color palette, and pin-on-top
 - Auto-save to plain `.md`, live reload on external edits, and cross-note search (`Cmd+Shift+F`)
 - Menu-bar tray with note list; customizable font, size, theme, opacity, and line numbers
+- In-app auto-update — a banner appears when a new release is out; one click to install
 
 ## Keybindings
-`Cmd+N` new · `Cmd+P` preview · `Cmd+Shift+P` pin · `Cmd+Delete` delete · `Cmd+=`/`Cmd+-` font size · `Cmd+,` settings · `Cmd+Shift+F` search · `Cmd+W` hide · `Cmd+Q` quit
+
+| Shortcut | Action |
+| --- | --- |
+| `Cmd+N` | New note (global) |
+| `Cmd+P` | Toggle markdown preview |
+| `Cmd+Shift+P` | Pin / unpin note on top |
+| `Cmd+Delete` | Delete note |
+| `Cmd+Shift+C` | Cycle note color (opt-in) |
+| `Cmd+=` / `Cmd+-` | Increase / decrease font size |
+| `Cmd+,` | Open settings |
+| `Cmd+Shift+F` | Search all notes |
+| `Cmd+W` | Hide note window |
+| `Cmd+Q` | Quit |
 
 ## Notes data
 Plain markdown files in `~/Stickies/` — edit them with any editor and open notes refresh automatically.

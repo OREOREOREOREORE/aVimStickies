@@ -8,6 +8,7 @@ mod windows;
 use notes::{NoteContent, NoteMeta, NoteSummary};
 use serde::Serialize;
 use tauri::{Emitter, Manager};
+use tauri_plugin_updater::UpdaterExt;
 
 pub(crate) fn create_note_impl(app: &tauri::AppHandle) -> Result<String, String> {
     let id = notes::new_id();
@@ -170,10 +171,46 @@ fn open_all(app: &tauri::AppHandle) {
     }
 }
 
+fn check_for_updates(app: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let updater = match app.updater() {
+            Ok(u) => u,
+            Err(e) => {
+                eprintln!("updater init failed: {e}");
+                return;
+            }
+        };
+        match updater.check().await {
+            Ok(Some(update)) => {
+                let version = update.version.clone();
+                let _ = app.emit("update-available", version);
+            }
+            Ok(None) => {}
+            Err(e) => eprintln!("update check failed: {e}"),
+        }
+    });
+}
+
+#[tauri::command]
+async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
+    let updater = app.updater().map_err(|e| e.to_string())?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "no update available".to_string())?;
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|e| e.to_string())?;
+    tauri::process::restart(&app.env());
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             create_note,
             list_notes,
@@ -188,6 +225,7 @@ pub fn run() {
             open_settings,
             open_search,
             open_note,
+            install_update,
             update_note_meta,
             delete_note
         ])
@@ -206,6 +244,7 @@ pub fn run() {
             open_all(handle);
             tray::build_tray(handle)?;
             watch::start_watcher(handle.clone());
+            check_for_updates(handle.clone());
             Ok(())
         })
         .run(tauri::generate_context!())

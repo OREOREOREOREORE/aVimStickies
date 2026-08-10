@@ -98,6 +98,7 @@
   let editorEl = $state<HTMLDivElement>();
   let mode = $state<"edit" | "preview">("edit");
   let html = $state("");
+  let updateVersion = $state("");
   let settings = $state<Settings | null>(null);
   let dirty = $state(false);
   let counts = $state({ chars: 0, lines: 0 });
@@ -126,6 +127,9 @@
       settings = e.payload;
       applySettings();
       applyLineNumbers();
+    }).then((u) => unlisteners.push(u));
+    void listen<string>("update-available", (e) => {
+      updateVersion = e.payload;
     }).then((u) => unlisteners.push(u));
     window.addEventListener("keydown", onKeydown);
 
@@ -328,6 +332,10 @@
     await invoke("create_note");
   }
 
+  async function installUpdate() {
+    await invoke("install_update");
+  }
+
   async function pickColor(name: string) {
     if (!note) return;
     note.color = name;
@@ -355,6 +363,12 @@
   {#if error}
     <p class="error">{error}</p>
   {:else if note}
+    {#if updateVersion}
+      <div class="banner">
+        <span>Update to v{updateVersion} available</span>
+        <button onclick={installUpdate}>Install</button>
+      </div>
+    {/if}
     <header data-tauri-drag-region>
       <h1 data-tauri-drag-region>{note.title}</h1>
       <div class="actions">
@@ -446,6 +460,27 @@
     border-bottom: 1px solid var(--header-border);
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  .banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: rgba(26, 115, 232, 0.12);
+    color: var(--fg);
+    border-bottom: 1px solid var(--header-border);
+  }
+
+  .banner button {
+    border: 1px solid var(--header-border);
+    background: rgba(26, 115, 232, 0.15);
+    color: var(--fg);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
   }
 
   h1 {
