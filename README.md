@@ -36,7 +36,7 @@ Download the .dmg from [Releases](../../releases), drag aVimStickies to Applicat
 | `Cmd+Shift+P` | Pin / unpin note on top |
 | `Cmd+Delete` | Delete note |
 | `Cmd+Shift+C` | Cycle note color (opt-in) |
-| `Cmd+=` / `Cmd+-` | Increase / decrease font size |
+| `Cmd+` / `Cmd-` | Increase / decrease font size |
 | `Cmd+,` | Open settings |
 | `Cmd+Shift+F` | Search all notes |
 | `Cmd+W` | Hide note window |

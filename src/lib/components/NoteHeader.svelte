@@ -82,7 +82,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 2px 8px;
+    padding: 1px 8px;
     border-bottom: 1px solid var(--header-border);
     -webkit-user-select: none;
     user-select: none;
@@ -91,7 +91,7 @@
   h1 {
     margin: 0;
     font-size: 12px;
-    line-height: 1.1;
+    line-height: 1;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -108,9 +108,9 @@
     border: none;
     background: transparent;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1;
-    padding: 2px 3px;
+    padding: 1px 2px;
     cursor: pointer;
     color: #555;
   }
@@ -128,8 +128,8 @@
   }
 
   .color-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     padding: 0;
     border-radius: 50%;
     border: 1px solid rgba(0, 0, 0, 0.2);
@@ -137,7 +137,7 @@
 
   .palette {
     position: absolute;
-    top: 26px;
+    top: 24px;
     right: 8px;
     display: flex;
     gap: 4px;
