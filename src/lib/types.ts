@@ -16,4 +16,5 @@ export type Settings = {
   enable_color_cycle: boolean;
   show_status_bar: boolean;
   show_line_numbers: boolean;
+  wrap_text: boolean;
 };

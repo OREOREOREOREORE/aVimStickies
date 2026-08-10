@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use crate::notes;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     pub font_family: String,
     pub font_size: u32,
@@ -15,6 +16,12 @@ pub struct Settings {
     pub enable_color_cycle: bool,
     pub show_status_bar: bool,
     pub show_line_numbers: bool,
+    #[serde(default = "default_true")]
+    pub wrap_text: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for Settings {
@@ -27,8 +34,9 @@ impl Default for Settings {
             show_preview_button: false,
             show_action_buttons: false,
             enable_color_cycle: false,
-            show_status_bar: false,
-            show_line_numbers: false,
+            show_status_bar: true,
+            show_line_numbers: true,
+            wrap_text: true,
         }
     }
 }

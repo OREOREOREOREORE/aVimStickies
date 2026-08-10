@@ -60,6 +60,7 @@ export interface NoteEditor {
   setDoc(doc: string): void;
   setReadOnly(ro: boolean): void;
   applyLineNumbers(show: boolean): void;
+  applyWrap(show: boolean): void;
   focus(): void;
   requestMeasure(): void;
   destroy(): void;
@@ -67,10 +68,16 @@ export interface NoteEditor {
 
 export function createNoteEditor(
   parent: HTMLElement,
-  opts: { doc: string; showLineNumbers: boolean; onChange?: (doc: string) => void }
+  opts: {
+    doc: string;
+    showLineNumbers: boolean;
+    wrapText: boolean;
+    onChange?: (doc: string) => void;
+  }
 ): NoteEditor {
   const readOnlyComp = new Compartment();
   const lineNumbersComp = new Compartment();
+  const wrapComp = new Compartment();
 
   const view = new EditorView({
     state: EditorState.create({
@@ -79,6 +86,7 @@ export function createNoteEditor(
         ...baseExtensions,
         readOnlyComp.of(EditorState.readOnly.of(false)),
         lineNumbersComp.of(lineNumberExts(opts.showLineNumbers)),
+        wrapComp.of(opts.wrapText ? EditorView.lineWrapping : []),
         markdown(),
         vim(),
         EditorView.updateListener.of((u) => {
@@ -106,6 +114,11 @@ export function createNoteEditor(
     },
     applyLineNumbers: (show: boolean) => {
       view.dispatch({ effects: lineNumbersComp.reconfigure(lineNumberExts(show)) });
+    },
+    applyWrap: (show: boolean) => {
+      view.dispatch({
+        effects: wrapComp.reconfigure(show ? EditorView.lineWrapping : []),
+      });
     },
     focus: () => view.focus(),
     requestMeasure: () => view.requestMeasure(),

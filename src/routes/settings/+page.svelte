@@ -13,6 +13,7 @@
     enable_color_cycle: boolean;
     show_status_bar: boolean;
     show_line_numbers: boolean;
+    wrap_text: boolean;
   };
 
   const FONT_PRESETS = [
@@ -137,6 +138,15 @@
         onchange={(e) => set("show_line_numbers", e.currentTarget.checked)}
       />
       <span>Show line numbers in the editor</span>
+    </label>
+
+    <label class="check">
+      <input
+        type="checkbox"
+        checked={settings.wrap_text}
+        onchange={(e) => set("wrap_text", e.currentTarget.checked)}
+      />
+      <span>Wrap long lines in the editor</span>
     </label>
     <p class="hint">
       <b>Keybinds: <br></b>

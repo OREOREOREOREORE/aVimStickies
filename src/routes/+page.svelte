@@ -49,6 +49,7 @@
       settings = e.payload;
       applySettings();
       view?.applyLineNumbers(settings.show_line_numbers);
+      view?.applyWrap(settings.wrap_text);
     }).then((u) => unlisteners.push(u));
     void listen<string>("update-available", (e) => {
       updateVersion = e.payload;
@@ -108,6 +109,7 @@
     view = createNoteEditor(editorEl, {
       doc,
       showLineNumbers: settings?.show_line_numbers ?? true,
+      wrapText: settings?.wrap_text ?? true,
       onChange: (content) => {
         dirty = true;
         setCounts(content);
