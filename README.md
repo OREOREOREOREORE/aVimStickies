@@ -11,7 +11,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg?style=flat-square)
 ![Language](https://img.shields.io/badge/language-Rust-orange.svg?style=flat-square)
 
-This app is only for vim users — if you live in `hjkl`, `yy`, and `dd`, you'll feel at home. Written in Rust.
+This app is only for vim users — if you live in `hjkl`, `yy`, and `dd`, you'll feel at home.
 
 [Install](#install) • [Features](#features) • [Keybindings](#keybindings)
 

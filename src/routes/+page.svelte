@@ -96,7 +96,11 @@
     root.style.setProperty("--font-size", `${settings.font_size}px`);
     root.style.opacity = String(settings.opacity);
     root.dataset.theme = settings.theme;
-    root.style.setProperty("--note-bg", COLORS[note?.color ?? DEFAULT_COLOR] ?? COLORS[DEFAULT_COLOR]);
+    if (settings.theme === "light") {
+      root.style.setProperty("--note-bg", COLORS[note?.color ?? DEFAULT_COLOR] ?? COLORS[DEFAULT_COLOR]);
+    } else {
+      root.style.removeProperty("--note-bg");
+    }
   }
 
   function createEditor(doc: string) {
