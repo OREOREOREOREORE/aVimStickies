@@ -11,10 +11,14 @@
   let inputEl = $state<HTMLInputElement>();
 
   onMount(() => {
-    inputEl?.focus();
+    void run();
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") getCurrentWindow().close();
     });
+  });
+
+  $effect(() => {
+    inputEl?.focus();
   });
 
   function onInput() {
@@ -23,10 +27,6 @@
   }
 
   async function run() {
-    if (!query.trim()) {
-      results = [];
-      return;
-    }
     results = await invoke<Result[]>("search_notes", { query: query.trim() });
   }
 

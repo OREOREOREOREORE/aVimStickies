@@ -8,7 +8,6 @@ mod windows;
 use notes::{NoteContent, NoteMeta, NoteSummary};
 use serde::Serialize;
 use tauri::{Emitter, Manager};
-use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
 use tauri_plugin_updater::UpdaterExt;
 
 pub(crate) fn create_note_impl(app: &tauri::AppHandle) -> Result<String, String> {
@@ -98,7 +97,10 @@ fn search_notes(query: String) -> Vec<SearchResult> {
     let mut results = Vec::new();
     for id in notes::note_ids_sorted(&notes::load_meta()) {
         if let Ok(n) = notes::read_note(&id) {
-            if n.content.to_lowercase().contains(&q) || n.title.to_lowercase().contains(&q) {
+            if q.is_empty()
+                || n.content.to_lowercase().contains(&q)
+                || n.title.to_lowercase().contains(&q)
+            {
                 let snippet = snippet_of(&n.content, &q);
                 results.push(SearchResult {
                     id: n.id,
@@ -108,10 +110,21 @@ fn search_notes(query: String) -> Vec<SearchResult> {
             }
         }
     }
+    results.sort_by(|a, b| note_mtime(&b.id).cmp(&note_mtime(&a.id)));
     results
 }
 
+fn note_mtime(id: &str) -> std::time::SystemTime {
+    notes::note_path(id)
+        .metadata()
+        .and_then(|m| m.modified())
+        .unwrap_or(std::time::UNIX_EPOCH)
+}
+
 fn snippet_of(content: &str, query: &str) -> String {
+    if query.is_empty() {
+        return content.chars().take(80).collect();
+    }
     let lower = content.to_lowercase();
     if let Some(idx) = lower.find(query) {
         let start = idx.saturating_sub(40);
@@ -230,21 +243,6 @@ pub fn run() {
             update_note_meta,
             delete_note
         ])
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_shortcuts(["cmd+n", "cmd+shift+f"])
-                .expect("register shortcuts")
-                .with_handler(|app, shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        if shortcut.matches(Modifiers::SUPER, Code::KeyN) {
-                            let _ = create_note_impl(app);
-                        } else if shortcut.matches(Modifiers::SUPER | Modifiers::SHIFT, Code::KeyF) {
-                            let _ = windows::open_search_window(app);
-                        }
-                    }
-                })
-                .build(),
-        )
         .setup(|app| {
             let handle = app.handle();
             open_all(handle);

@@ -132,6 +132,9 @@
     if (key === "p") {
       e.preventDefault();
       void togglePreview();
+    } else if (key === "n") {
+      e.preventDefault();
+      void newNote();
     } else if (key === "P") {
       e.preventDefault();
       void togglePin();

@@ -1,6 +1,6 @@
 [package]
 name = "avimstickies"
-version = "0.1.2"
+version = "0.1.3"
 description = "A markdown sticky-note app with vim keybindings"
 authors = ["you"]
 edition = "2021"
@@ -26,6 +26,5 @@ dirs = "6"
 trash = "5"
 pulldown-cmark = "0.13.4"
 notify = "8.2.0"
-tauri-plugin-global-shortcut = "2.3.2"
 tauri-plugin-updater = "2.10.1"
 
