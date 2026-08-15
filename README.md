@@ -23,7 +23,7 @@ Download the .dmg from [Releases](../../releases), drag aVimStickies to Applicat
 ## Features
 - Vim editing + markdown preview (`Cmd+P`) in every note
 - Floating windows with remembered position/size, 6-color palette, and pin-on-top
-- Auto-save to plain `.md`, live reload on external edits, and cross-note search (`Cmd+Shift+F`)
+- Auto-save to plain `.md`, live reload on external edits, and cross-note search (`Cmd+Shift+F`) that lists every note on open
 - Menu-bar tray with note list; customizable font, size, theme, opacity, and line numbers
 - In-app auto-update — a banner appears when a new release is out; one click to install
 
@@ -31,7 +31,7 @@ Download the .dmg from [Releases](../../releases), drag aVimStickies to Applicat
 
 | Shortcut | Action |
 | --- | --- |
-| `Cmd+N` | New note (global) |
+| `Cmd+N` | New note |
 | `Cmd+P` | Toggle markdown preview |
 | `Cmd+Shift+P` | Pin / unpin note on top |
 | `Cmd+Delete` | Delete note |
