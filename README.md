@@ -50,4 +50,4 @@ Or download the `.dmg` from [Releases](../../releases) and drag aVimStickies to 
 Plain markdown files in `~/Stickies/` — edit them with any editor and open notes refresh automatically.
 
 ## Security
-Open source and auditable; downloads come only from this repo's GitHub Releases; the installer verifies a published SHA-256; updates are ed25519-signed and verified; no telemetry. aVimStickies is currently unsigned, so a quarantined copy may need one right-click → Open. Details: [SECURITY.md](SECURITY.md).
+[SECURITY.md](SECURITY.md).
