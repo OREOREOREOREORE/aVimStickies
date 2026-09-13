@@ -21,7 +21,7 @@ fi
 
 case "$(uname -m)" in
   arm64 | aarch64) ARCH="aarch64" ;;
-  x86_64) ARCH="x86_64" ;;
+  x86_64) ARCH="x64" ;;
   *)
     echo "aVimStickies: unsupported architecture $(uname -m)" >&2
     exit 1
