@@ -18,7 +18,11 @@ This app is only for vim users — if you live in `hjkl`, `yy`, and `dd`, you'll
 </div>
 
 ## Install
-Download the .dmg from [Releases](../../releases), drag aVimStickies to Applications, then right-click → Open on first launch (unsigned build).
+One line — the script verifies a published SHA-256 before installing:
+```sh
+curl -fsSL https://github.com/OREOREOREOREORE/aVimStickies/releases/latest/download/install.sh | sh
+```
+Or download the `.dmg` from [Releases](../../releases) and drag aVimStickies to Applications.
 
 ## Features
 - Vim editing + markdown preview (`Cmd+P`) in every note
@@ -44,3 +48,6 @@ Download the .dmg from [Releases](../../releases), drag aVimStickies to Applicat
 
 ## Notes data
 Plain markdown files in `~/Stickies/` — edit them with any editor and open notes refresh automatically.
+
+## Security
+Open source and auditable; downloads come only from this repo's GitHub Releases; the installer verifies a published SHA-256; updates are ed25519-signed and verified; no telemetry. aVimStickies is currently unsigned, so a quarantined copy may need one right-click → Open. Details: [SECURITY.md](SECURITY.md).
